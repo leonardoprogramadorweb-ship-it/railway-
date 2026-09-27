@@ -10,8 +10,14 @@ class ReportController extends Controller
 {
     public function index(Request $request)
     {
-        // Si el usuario elige una fecha, usamos esa; de lo contrario, la fecha de hoy
-        $selectedDate = $request->input('date', Carbon::today()->toDateString());
+        // Si el usuario elige una fecha, la usamos; de lo contrario, la fecha de hoy
+        $inputDate = $request->input('date', Carbon::today()->toDateString());
+        
+        try {
+            $selectedDate = Carbon::parse($inputDate)->toDateString();
+        } catch (\Exception $e) {
+            $selectedDate = Carbon::today()->toDateString();
+        }
 
         // Consultar las ventas de la fecha seleccionada con sus detalles
         $sales = Sale::with('details.product')
@@ -23,5 +29,16 @@ class ReportController extends Controller
         $totalSales = $sales->sum('total');
 
         return view('reports.index', compact('sales', 'totalSales', 'selectedDate'));
+    }
+
+    public function destroyByDate(Request $request)
+    {
+        $date = $request->input('date');
+
+        if ($date) {
+            Sale::whereDate('created_at', $date)->delete();
+        }
+
+        return redirect()->route('reports.index', ['date' => $date])->with('success', 'Los reportes de la fecha seleccionada han sido eliminados correctamente.');
     }
 }
